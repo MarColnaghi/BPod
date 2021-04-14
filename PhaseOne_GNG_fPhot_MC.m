@@ -63,13 +63,13 @@ for currentTrial = 1: S.GUI.mySessionTrials
         
         % CS+
         case 1
-            StimulusArgument= {'ValveModule1', 5,'BNCState', 1};
+            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};
             LickActionState= 'Reward';
             NoLickActionState= 'InterTrialInterval';
            
         % CS-
         case 2
-            StimulusArgument= {'ValveModule1', 7,'BNCState', 1};
+            StimulusArgument= {'ValveModule1', 7,'BNC1', 1};
             LickActionState= 'TimeOut';
             NoLickActionState= 'InterTrialInterval';            
     end

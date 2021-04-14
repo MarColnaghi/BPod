@@ -1,13 +1,15 @@
-function DayOne_GNG_fPhot_MC
+function PhaseTwo_GNG_fPhot_MC
 
-% This protocol presents the mouse with two stimuli, a rewarded odor and a non-rewarded valve click. 
+% This protocol presents the mouse with two stimuli, a rewarded odor and two non-rewarded odors. 
 % Written by Marco Colnaghi and Riccardo Tambone, 04.13.2021.
 % 
 % SETUP
 % You will need:
 % - A Bpod.
 % - An Olfactometer.
+% - Three Odorants
 % - A Lickport.
+% - An Air Puff System
 
 global BpodSystem
 
@@ -63,19 +65,19 @@ for currentTrial = 1: S.GUI.mySessionTrials
         
         % CS1+
         case 1
-            StimulusArgument= {'ValveModule1', 8,'BNCState', 1};
+            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};
             LickActionState= 'Reward';
             NoLickActionState= 'InterTrialInterval';
            
         % CS2-
         case 2
-            StimulusArgument= {'ValveModule1', 6,'BNCState', 1};
+            StimulusArgument= {'ValveModule1', 6,'BNC1', 1};
             LickActionState= 'TimeOut';
             NoLickActionState= 'InterTrialInterval';
             
         % CS3-
         case 3
-            StimulusArgument= {'ValveModule1', 4,'BNCState', 1};
+            StimulusArgument= {'ValveModule1', 4,'BNC1', 1};
             LickActionState= 'TimeOut';
             NoLickActionState= 'InterTrialInterval';
     end
