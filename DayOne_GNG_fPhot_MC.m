@@ -16,13 +16,17 @@ global BpodSystem
 S = BpodSystem.ProtocolSettings; % Loads settings file chosen in launch manager into current workspace as a struct called 'S'
 
 if isempty(fieldnames(S))             
-    S.GUI.RewardAmount= 5;            % uL
-    S.GUI.PreStimulusDuration= 0.5; 
-    S.GUI.StimulusDuration= 2; 
+    S.GUI.RewardAmount= 1;            % uL
+    S.GUI.PreStimulusDuration= 5; 
+    S.GUI.StimulusDuration= 2;
+    S.GUI.PauseDuration = 1
     S.GUI.TimeForResponseDuration= 1;
-    S.GUI.NothingTimeDuration= 2;
-    S.GUI.DrinkingGraceDuration= 2;
-    S.GUI.MaxTrials= 200;   
+    S.GUI.DrinkingGraceDuration= 2;    
+    S.GUI.TimeOut = 15;    
+    S.GUI.ITImin = 5;
+    S.GUI.ITImax = 8;
+    S.GUI.MaxTrials= 100;
+    S.GUI.mySessionTrials = 50;
 end
 
 %% Define Trial Structure
@@ -34,7 +38,7 @@ BpodSystem.Data.TrialTypes= [];                   % The trial type of each trial
 
 % ITI
 
-ITI = randi([S.GUI.ITImin - S.GUI.PreStimulusDuration, S.GUI.ITImax - S.GUI.PreStimulusDuration], 1, S.GUI.MaxTrials); 
+ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); 
 
 %% Initialize Plots
 
@@ -47,7 +51,7 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 %% Main Loop
 
-for currentTrial = 1: S.GUI.MaxTrials
+for currentTrial = 1: S.GUI.mySessionTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
     RewardOutput= {'ValveState',1};            % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
@@ -59,13 +63,13 @@ for currentTrial = 1: S.GUI.MaxTrials
         
         % CS+
         case 1
-            StimulusArgument= {'ValveModule1', 5};
+            StimulusArgument= {'ValveModule1', 5,'BNCState', 1};
             LickActionState= 'Reward';
             NoLickActionState= 'InterTrialInterval';
            
         % CS-
         case 2
-            StimulusArgument= {'ValveModule1', 7};
+            StimulusArgument= {'ValveModule1', 7,'BNCState', 1};
             LickActionState= 'TimeOut';
             NoLickActionState= 'InterTrialInterval';            
     end
@@ -74,6 +78,11 @@ for currentTrial = 1: S.GUI.MaxTrials
     
     
     sma= NewStateMachine(); % Initialize new state machine description
+    
+    sma= AddState(sma, 'Name', 'StartTrial',...
+        'Timer', 5,...
+        'StateChangeCondition', {'BNC1High', 'PreStimulus'},...
+        'OutputActions',{});
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
@@ -87,9 +96,14 @@ for currentTrial = 1: S.GUI.MaxTrials
 
     sma= AddState(sma, 'Name', 'StopStimulus',...
         'Timer', 0,...
+        'StateChangeCondition', {'Tup','Pause'},...
+        'OutputActions', StopStimulusOutput);
+    
+    sma= AddState(sma, 'Name', 'Pause',...
+        'Timer', S.GUI.PauseDuration,...
         'StateChangeCondition', {'Tup','TimeForResponse'},...
-        'OutputActions', StopStimulusOutput); 
-
+        'OutputActions', {});
+    
     sma= AddState(sma, 'Name', 'TimeForResponse',...
         'Timer', S.GUI.TimeForResponseDuration,...
         'StateChangeCondition', {'Tup', NoLickActionState, 'Port1In', LickActionState},...
@@ -124,16 +138,16 @@ for currentTrial = 1: S.GUI.MaxTrials
         UpdateTrialTypeOutcomePlot(trialTypes, BpodSystem.Data);
         UpdateTotalRewardDisplay(S.GUI.RewardAmount, currentTrial);
         SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
-    end     
+    end
     HandlePauseCondition;
     if BpodSystem.Status.BeingUsed == 0
-        Obj = ValveDriverModule('COM4');   %%% 
-        for idx = 1:8
+        Obj= ValveDriverModule('COM7');   %%%
+        for idx= 1:8
             closeValve(Obj, idx)
         end
         return;
     end
-end 
+end
 
 
 % -1: error, unpunished (unfilled red circle)
@@ -144,9 +158,10 @@ end
 
 function UpdateTrialTypeOutcomePlot(TrialTypes, Data)
 % Determine outcomes from state data and score as the SideOutcomePlot plugin expects
+
 global BpodSystem
 
-Outcomes = nan(1,Data.nTrials);
+Outcomes = zeros(1,Data.nTrials);
 for x = 1:Data.nTrials   
     if TrialTypes(x) == 1 % CS+ Trials
         if ~isnan(Data.RawEvents.Trial{x}.States.Reward(1))
@@ -156,7 +171,7 @@ for x = 1:Data.nTrials
         end
         
     elseif TrialTypes(x) == 2 % Click Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.FakeReward(1))
+        if ~isnan(Data.RawEvents.Trial{x}.States.TimeOut(1))
             Outcomes(x) = 0; % Licked, Timeout
         else
             Outcomes(x) = 2; % No Lick
