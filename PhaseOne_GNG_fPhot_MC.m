@@ -30,8 +30,8 @@ end
 
 %% Define Trial Structure
 
-probCS0 = .20;             % Valve Click Probability
-probCS1 = .80;             % CS+ Probability
+probCS0 = .40;             % Valve Click Probability
+probCS1 = .60;             % CS+ Probability
 numOfCS0 = 2*ones(1, S.GUI.mySessionTrials * probCS0);
 numOfCS1 = ones(1, S.GUI.mySessionTrials * probCS1);
 trialTypes = ([numOfCS0, numOfCS1]); 
@@ -40,11 +40,7 @@ trialTypes = trialTypes(randperm(length(trialTypes))); % Create Trial Vector
 % prob = [0.3334 0.3333 0.3333];
 % probDist= makedist('Multinomial', prob);
 % trialTypes= random(probDist, 1, S.GUI.MaxTrials); % Draw list of trials from the distribution
-% BpodSystem.Data.TrialTypes= [];
-
-probDist= makedist('Multinomial', prob);
-trialTypes= random(probDist, 1, S.GUI.MaxTrials); % Draw list of trials from the distribution
-BpodSystem.Data.TrialTypes= [];                   % The trial type of each trial completed will be added here.
+% BpodSystem.Data.TrialTypes= [];                   % The trial type of each trial completed will be added here.
 
 % ITI
 
@@ -75,13 +71,13 @@ for currentTrial = 1: S.GUI.mySessionTrials
         case 1
             StimulusArgument= {'ValveModule1', 5,'BNC1', 1};
             LickActionState= 'Reward';
-            NoLickActionState= 'InterTrialInterval';
+            NoLickActionState= 'EndTrial';
            
         % CS-
         case 2
             StimulusArgument= {'ValveModule1', 7,'BNC1', 1};
-            LickActionState= 'InterTrialInterval';
-            NoLickActionState= 'InterTrialInterval';            
+            LickActionState= 'EndTrial';
+            NoLickActionState= 'EndTrial';            
     end
     
     % States Definitions   
@@ -89,7 +85,9 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     sma= NewStateMachine(); % Initialize new state machine description
     
-    sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.1,'Loop',1, 'Channel', 'BNC2');
+    sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.001, 'OnsetDelay', 0,...
+                     'Channel', 'BNC2', 'OnLevel', 1, 'OffLevel', 0,...
+                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); 
     
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
@@ -99,7 +97,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions',{});  
+        'OutputActions',{'GlobalTimerTrig', 1});  
 
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
@@ -128,9 +126,14 @@ for currentTrial = 1: S.GUI.mySessionTrials
 
     sma = AddState(sma, 'Name', 'DrinkingGrace', ...
         'Timer', S.GUI.DrinkingGraceDuration,...
-        'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
+        'StateChangeConditions', {'Tup', 'EndTrial'},...
         'OutputActions', {});
     
+    sma = AddState(sma, 'Name', 'EndTrial', ...
+        'Timer', S.GUI.DrinkingGraceDuration,...
+        'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
+        'OutputActions', {'GlobalTimerCancel', 1});
+        
     sma= AddState(sma, 'Name', 'InterTrialInterval',...
         'Timer', ITI(currentTrial), ...
         'StateChangeConditions', {'Tup', '>exit'},...
@@ -179,9 +182,9 @@ for x = 1:Data.nTrials
         
     elseif TrialTypes(x) == 2 % Click Trials
         if ~isnan(Data.RawEvents.Trial{x}.States.TimeOut(1))
-            Outcomes(x) = 0; % Licked, Timeout
+            Outcomes(x) = 3; % Licked
         else
-            Outcomes(x) = 2; % No Lick
+            Outcomes(x) = 3; % No Lick
         end
     end
 end
