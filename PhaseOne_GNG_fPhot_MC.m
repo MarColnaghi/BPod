@@ -19,19 +19,29 @@ if isempty(fieldnames(S))
     S.GUI.RewardAmount= 1;            % uL
     S.GUI.PreStimulusDuration= 5; 
     S.GUI.StimulusDuration= 2;
-    S.GUI.PauseDuration = 1
+    S.GUI.PauseDuration= 1;
     S.GUI.TimeForResponseDuration= 1;
-    S.GUI.DrinkingGraceDuration= 2;    
-    S.GUI.TimeOut = 15;    
-    S.GUI.ITImin = 5;
-    S.GUI.ITImax = 8;
-    S.GUI.MaxTrials= 100;
-    S.GUI.mySessionTrials = 50;
+    S.GUI.DrinkingGraceDuration= 2;     
+    S.GUI.ITImin= 5;
+    S.GUI.ITImax= 8;
+    S.GUI.MaxTrials= 200;
+    S.GUI.mySessionTrials= 150;
 end
 
 %% Define Trial Structure
 
-prob = [0.5 0.5];
+probCS0 = .20;             % Valve Click Probability
+probCS1 = .80;             % CS+ Probability
+numOfCS0 = 2*ones(1, S.GUI.mySessionTrials * probCS0);
+numOfCS1 = ones(1, S.GUI.mySessionTrials * probCS1);
+trialTypes = ([numOfCS0, numOfCS1]); 
+trialTypes = trialTypes(randperm(length(trialTypes))); % Create Trial Vector 
+
+% prob = [0.3334 0.3333 0.3333];
+% probDist= makedist('Multinomial', prob);
+% trialTypes= random(probDist, 1, S.GUI.MaxTrials); % Draw list of trials from the distribution
+% BpodSystem.Data.TrialTypes= [];
+
 probDist= makedist('Multinomial', prob);
 trialTypes= random(probDist, 1, S.GUI.MaxTrials); % Draw list of trials from the distribution
 BpodSystem.Data.TrialTypes= [];                   % The trial type of each trial completed will be added here.
@@ -70,7 +80,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
         % CS-
         case 2
             StimulusArgument= {'ValveModule1', 7,'BNC1', 1};
-            LickActionState= 'TimeOut';
+            LickActionState= 'InterTrialInterval';
             NoLickActionState= 'InterTrialInterval';            
     end
     
@@ -78,6 +88,8 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     
     sma= NewStateMachine(); % Initialize new state machine description
+    
+    sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.1,'Loop',1, 'Channel', 'BNC2');
     
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
@@ -116,11 +128,6 @@ for currentTrial = 1: S.GUI.mySessionTrials
 
     sma = AddState(sma, 'Name', 'DrinkingGrace', ...
         'Timer', S.GUI.DrinkingGraceDuration,...
-        'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
-        'OutputActions', {});
-    
-    sma = AddState(sma, 'Name', 'TimeOut', ...
-        'Timer', S.GUI.TimeOut,...
         'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
         'OutputActions', {});
     
