@@ -1,4 +1,4 @@
-function PhaseOne_GNG_fPhot_MC
+function Conditioning_GNG_fPhot_MC
 
 % This protocol presents the mouse with two stimuli, a rewarded odor and a non-rewarded valve click. 
 % Written by Marco Colnaghi and Riccardo Tambone, 04.13.2021.
@@ -44,7 +44,7 @@ trialTypes = trialTypes(randperm(length(trialTypes))); % Create Trial Vector
 
 % ITI
 
-ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); 
+ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); % Create ITIs for each single Trial
 
 %% Initialize Plots
 
@@ -69,47 +69,46 @@ for currentTrial = 1: S.GUI.mySessionTrials
         
         % CS+
         case 1
-            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};
-            LickActionState= 'Reward';
-            NoLickActionState= 'EndTrial';
+            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            LickActionState= 'Reward';                              % If Lick, Give Reward
+            NoLickActionState= 'EndTrial';                          % If not, end the Trial
            
         % CS-
         case 2
-            StimulusArgument= {'ValveModule1', 7,'BNC1', 1};
-            LickActionState= 'EndTrial';
-            NoLickActionState= 'EndTrial';            
+            StimulusArgument= {'ValveModule1', 7,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            LickActionState= 'EndTrial';                            % End the Trial
+            NoLickActionState= 'EndTrial';                          % End the Trial
     end
     
-    % States Definitions   
-    
+    % States Definitions
     
     sma= NewStateMachine(); % Initialize new state machine description
     
     sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.001, 'OnsetDelay', 0,...
                      'Channel', 'BNC2', 'OnLevel', 1, 'OffLevel', 0,...
-                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); 
+                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); % Create Timer for Camera Acquisition (Set Loop Interval Properly to adjust Camera Frame Rate
     
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
-        'StateChangeCondition', {'BNC1High', 'PreStimulus'},...
-        'OutputActions',{});
+        'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
+        'OutputActions',{});                                        
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions',{'GlobalTimerTrig', 1});  
+        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition
 
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
         'StateChangeCondition', {'Tup','StopStimulus'},...
-        'OutputActions', StimulusArgument); 
+        'OutputActions', StimulusArgument);                         % Sends TTL to signal Stimulus Delivery Onset/Offset
 
     sma= AddState(sma, 'Name', 'StopStimulus',...
         'Timer', 0,...
         'StateChangeCondition', {'Tup','Pause'},...
         'OutputActions', StopStimulusOutput);
     
-    sma= AddState(sma, 'Name', 'Pause',...
+    sma= AddState(sma, 'Name', 'Pause',...                          % Waits for Set amount of Time (CS-ResponseWindow Delay)
         'Timer', S.GUI.PauseDuration,...
         'StateChangeCondition', {'Tup','TimeForResponse'},...
         'OutputActions', {});
@@ -119,12 +118,12 @@ for currentTrial = 1: S.GUI.mySessionTrials
         'StateChangeCondition', {'Tup', NoLickActionState, 'Port1In', LickActionState},...
         'OutputActions', {});
 
-    sma = AddState(sma, 'Name', 'Reward', ...
+    sma = AddState(sma, 'Name', 'Reward', ...                       
         'Timer', RewardAmount,...
         'StateChangeConditions', {'Tup', 'DrinkingGrace'},...
         'OutputActions', RewardOutput);
 
-    sma = AddState(sma, 'Name', 'DrinkingGrace', ...
+    sma = AddState(sma, 'Name', 'DrinkingGrace', ...                % Grace period for the mouse (to let him drink)
         'Timer', S.GUI.DrinkingGraceDuration,...
         'StateChangeConditions', {'Tup', 'EndTrial'},...
         'OutputActions', {});
@@ -132,7 +131,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma = AddState(sma, 'Name', 'EndTrial', ...
         'Timer', S.GUI.DrinkingGraceDuration,...
         'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
-        'OutputActions', {'GlobalTimerCancel', 1});
+        'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
         
     sma= AddState(sma, 'Name', 'InterTrialInterval',...
         'Timer', ITI(currentTrial), ...
@@ -181,7 +180,7 @@ for x = 1:Data.nTrials
         end
         
     elseif TrialTypes(x) == 2 % Click Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.TimeOut(1))
+        if ~isnan(Data.RawEvents.Trial{x}.States.EndTrial(1))      % No Graphical Display of Performance during Valve Clicks Trials
             Outcomes(x) = 3; % Licked
         else
             Outcomes(x) = 3; % No Lick
