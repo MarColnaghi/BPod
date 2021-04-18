@@ -1,4 +1,4 @@
-function Conditioning_GNG_fPhot_MC
+function Conditioning_fPhot_MC
 
 % This protocol presents the mouse with two stimuli, a rewarded odor and a non-rewarded valve click. 
 % Written by Marco Colnaghi and Riccardo Tambone, 04.13.2021.
