@@ -9,6 +9,8 @@ function Conditioning_GNG_fPhot_MC
 % - An Olfactometer.
 % - A Lickport.
 
+% Presented on DAY 3 and 4.
+
 global BpodSystem
 
 %% Define Parameters
