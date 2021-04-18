@@ -1,4 +1,4 @@
-function PhaseTwo_GNG_fPhot_MC
+function Discrimination_fPhot_MC
 
 % This protocol presents the mouse with two stimuli, a rewarded odor and two non-rewarded odors. 
 % Written by Marco Colnaghi and Riccardo Tambone, 04.13.2021.
