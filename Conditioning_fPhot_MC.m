@@ -9,7 +9,7 @@ function Conditioning_fPhot_MC
 % - An Olfactometer.
 % - A Lickport.
 
-% Presented on DAY 3 and 4.
+% To be presented on DAY 3 and 4.
 
 global BpodSystem
 
@@ -71,7 +71,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
         
         % CS+
         case 1
-            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             LickActionState= 'Reward';                              % If Lick, Give Reward
             NoLickActionState= 'EndTrial';                          % If not, end the Trial
            
@@ -88,7 +88,9 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.001, 'OnsetDelay', 0,...
                      'Channel', 'BNC2', 'OnLevel', 1, 'OffLevel', 0,...
-                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); % Create Timer for Camera Acquisition (Set Loop Interval Properly to adjust Camera Frame Rate
+                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); 
+    % Create Timer for Camera Acquisition (Set Loop Interval Properly to
+    % adjust Camera Frame Rate) - 20Hz
     
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
@@ -182,7 +184,7 @@ for x = 1:Data.nTrials
         end
         
     elseif TrialTypes(x) == 2 % Click Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.EndTrial(1))      % No Graphical Display of Performance during Valve Clicks Trials
+        if ~isnan(Data.RawEvents.Trial{x}.States.EndTrial(1))      % No Graphical Display of Performance during Valve Clicks Trials (?)
             Outcomes(x) = 3; % Licked
         else
             Outcomes(x) = 3; % No Lick

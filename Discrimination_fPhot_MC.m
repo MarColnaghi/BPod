@@ -1,7 +1,7 @@
 function Discrimination_fPhot_MC
 
 % This protocol presents the mouse with two stimuli, a rewarded odor and two non-rewarded odors. 
-% Written by Marco Colnaghi and Riccardo Tambone, 04.13.2021.
+% Written by Marco Colnaghi and Riccardo Tambone, 04.14.2021.
 % 
 % SETUP
 % You will need:
@@ -9,7 +9,9 @@ function Discrimination_fPhot_MC
 % - An Olfactometer.
 % - Three Odorants
 % - A Lickport.
-% - An Air Puff System
+
+% To be presented on DAY 5 and 6.
+
 
 global BpodSystem
 
@@ -21,26 +23,34 @@ if isempty(fieldnames(S))
     S.GUI.RewardAmount= 1;            % uL
     S.GUI.PreStimulusDuration= 5; 
     S.GUI.StimulusDuration= 2;
-    S.GUI.PauseDuration = 1
+    S.GUI.PauseDuration= 1;
     S.GUI.TimeForResponseDuration= 1;
-    S.GUI.DrinkingGraceDuration= 2;    
-    S.GUI.TimeOut = 15;    
-    S.GUI.ITImin = 5;
-    S.GUI.ITImax = 8;
-    S.GUI.MaxTrials= 100;
-    S.GUI.mySessionTrials = 50;
+    S.GUI.DrinkingGraceDuration= 2;     
+    S.GUI.ITImin= 5;
+    S.GUI.ITImax= 8;
+    S.GUI.MaxTrials= 200;
+    S.GUI.mySessionTrials = 120;
 end
 
 %% Define Trial Structure
 
-prob = [0.3334 0.3333 0.3333];
-probDist= makedist('Multinomial', prob);
-trialTypes= random(probDist, 1, S.GUI.MaxTrials); % Draw list of trials from the distribution
-BpodSystem.Data.TrialTypes= [];                   % The trial type of each trial completed will be added here.
+numOfTrials = 40;
+
+numOfCS1 = ones(1, numOfTrials);
+numOfCS2 = 2*ones(1, numOfTrials);
+numOfCS3 = 3*ones(1, numOfTrials);
+
+trialTypes = ([numOfCS1, numOfCS2, numOfCS3]); 
+trialTypes = trialTypes(randperm(length(trialTypes))); 
+
+% prob = [0.3334 0.3333 0.3333];
+% probDist= makedist('Multinomial', prob);
+% trialTypes= random(probDist, 1, S.GUI.MaxTrials); % Draw list of trials from the distribution
+% BpodSystem.Data.TrialTypes= [];                   % The trial type of each trial completed will be added here.
 
 % ITI
 
-ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); 
+ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); % Create ITIs for each single Trial
 
 %% Initialize Plots
 
@@ -66,20 +76,20 @@ for currentTrial = 1: S.GUI.mySessionTrials
         % CS1+
         case 1
             StimulusArgument= {'ValveModule1', 8,'BNC1', 1};
-            LickActionState= 'Reward';
-            NoLickActionState= 'InterTrialInterval';
+            LickActionState= 'Reward';                              % If Lick, Give Reward
+            NoLickActionState= 'EndTrial';                          % If not, end the Trial
            
         % CS2-
         case 2
             StimulusArgument= {'ValveModule1', 6,'BNC1', 1};
-            LickActionState= 'TimeOut';
-            NoLickActionState= 'InterTrialInterval';
+            LickActionState= 'EndTrial';                            % End the Trial
+            NoLickActionState= 'EndTrial';                          % End the Trial
             
         % CS3-
         case 3
             StimulusArgument= {'ValveModule1', 4,'BNC1', 1};
-            LickActionState= 'TimeOut';
-            NoLickActionState= 'InterTrialInterval';
+            LickActionState= 'EndTrial';                            % End the Trial
+            NoLickActionState= 'EndTrial';                          % End the Trial
     end
     
     % States Definitions   
@@ -87,27 +97,33 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     sma= NewStateMachine(); % Initialize new state machine description
     
+    sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.001, 'OnsetDelay', 0,...
+                     'Channel', 'BNC2', 'OnLevel', 1, 'OffLevel', 0,...
+                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); 
+    % Create Timer for Camera Acquisition (Set Loop Interval Properly to
+    % adjust Camera Frame Rate) - 20 Hz
+                 
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
-        'StateChangeCondition', {'BNC1High', 'PreStimulus'},...
-        'OutputActions',{});
+        'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
+        'OutputActions',{});                                        
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions',{});  
+        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition
 
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
         'StateChangeCondition', {'Tup','StopStimulus'},...
-        'OutputActions', StimulusArgument); 
+        'OutputActions', StimulusArgument);                         % Sends TTL to signal Stimulus Delivery Onset/Offset
 
     sma= AddState(sma, 'Name', 'StopStimulus',...
         'Timer', 0,...
         'StateChangeCondition', {'Tup','Pause'},...
         'OutputActions', StopStimulusOutput);
     
-    sma= AddState(sma, 'Name', 'Pause',...
+    sma= AddState(sma, 'Name', 'Pause',...                          % Waits for Set amount of Time (CS-ResponseWindow Delay)
         'Timer', S.GUI.PauseDuration,...
         'StateChangeCondition', {'Tup','TimeForResponse'},...
         'OutputActions', {});
@@ -117,21 +133,21 @@ for currentTrial = 1: S.GUI.mySessionTrials
         'StateChangeCondition', {'Tup', NoLickActionState, 'Port1In', LickActionState},...
         'OutputActions', {});
 
-    sma = AddState(sma, 'Name', 'Reward', ...
+    sma = AddState(sma, 'Name', 'Reward', ...                       
         'Timer', RewardAmount,...
         'StateChangeConditions', {'Tup', 'DrinkingGrace'},...
         'OutputActions', RewardOutput);
 
-    sma = AddState(sma, 'Name', 'DrinkingGrace', ...
+    sma = AddState(sma, 'Name', 'DrinkingGrace', ...                % Grace period for the mouse (to let him drink)
+        'Timer', S.GUI.DrinkingGraceDuration,...
+        'StateChangeConditions', {'Tup', 'EndTrial'},...
+        'OutputActions', {});
+    
+    sma = AddState(sma, 'Name', 'EndTrial', ...
         'Timer', S.GUI.DrinkingGraceDuration,...
         'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
-        'OutputActions', {});
-    
-    sma = AddState(sma, 'Name', 'TimeOut', ...
-        'Timer', S.GUI.TimeOut,...
-        'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
-        'OutputActions', {});
-    
+        'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
+        
     sma= AddState(sma, 'Name', 'InterTrialInterval',...
         'Timer', ITI(currentTrial), ...
         'StateChangeConditions', {'Tup', '>exit'},...
@@ -159,10 +175,8 @@ end
 
 
 % -1: error, unpunished (unfilled red circle)
-% 0: error, punished (filled red circle)
 % 1: correct, rewarded (filled green circle)
-% 2: correct, unrewarded (unfilled green circle)
-% 3: no response (unfilled black circle)
+% 3: CS- trials (unfilled black circle)
 
 function UpdateTrialTypeOutcomePlot(TrialTypes, Data)
 % Determine outcomes from state data and score as the SideOutcomePlot plugin expects
@@ -179,10 +193,10 @@ for x = 1:Data.nTrials
         end
         
     elseif TrialTypes(x) == 2 || TrialTypes(x) == 3 % CS- Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.TimeOut(1))
-            Outcomes(x) = 0; % Licked, Timeout
+        if ~isnan(Data.RawEvents.Trial{x}.States.EndTrial(1))      % No Graphical Display of Performance during Valve Clicks Trials (?)
+            Outcomes(x) = 3;
         else
-            Outcomes(x) = 2; % No Lick
+            Outcomes(x) = 3;
         end
     end
     
