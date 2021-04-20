@@ -20,32 +20,33 @@ global BpodSystem
 S = BpodSystem.ProtocolSettings; % Loads settings file chosen in launch manager into current workspace as a struct called 'S'
 
 if isempty(fieldnames(S))             
-    S.GUI.RewardAmount= 1;            % uL
-    S.GUI.PreStimulusDuration= 5; 
+    S.GUI.RewardAmount= 3;            % uL
+    S.GUI.PreStimulusDuration= 4; 
     S.GUI.StimulusDuration= 2;
-    S.GUI.PauseDuration = 1
-    S.GUI.EndTrialTime = 2
-    S.GUI.AirPuffTime = 2;
-    S.GUI.ITImin = 5;
-    S.GUI.ITImax = 8;
+    S.GUI.PauseDuration= 1;
+    S.GUI.TimeForResponseDuration= 1;
+    S.GUI.DrinkingGraceDuration= 2;
+    S.GUI.AirPuffTime= 2;
+    S.GUI.EndTrialLength= 4;
+    S.GUI.ITImin= 17;
+    S.GUI.ITImax= 23;
     S.GUI.MaxTrials= 200;
-    S.GUI.mySessionTrials = 80;
+    S.GUI.mySessionTrials= 80;
 end
 
 %% Define Trial Structure
 
 numOfTrials = 40;
 
-numOfCS1 = ones(1, numOfTrials);
-numOfCS3 = 3*ones(1, numOfTrials);
+numOfCS1 = 2*ones(1, numOfTrials);
+numOfCS3 = 5*ones(1, numOfTrials);
 
-trialTypes = ([numOfCS1, numOfCS2, numOfCS3]); 
+trialTypes = ([numOfCS1 numOfCS3]); 
 trialTypes = trialTypes(randperm(length(trialTypes))); 
 
-% prob = [0.3334 0.3333 0.3333];
-% probDist= makedist('Multinomial', prob);
-% trialTypes= random(probDist, 1, S.GUI.MaxTrials); % Draw list of trials from the distribution
-% BpodSystem.Data.TrialTypes= [];                   % The trial type of each trial completed will be added here.
+% Ending Sequence
+endSequence = zeros(1,10);
+trialTypes  = [trialTypes endSequence]; 
 
 % ITI
 
@@ -68,23 +69,22 @@ for currentTrial = 1: S.GUI.mySessionTrials
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
     S = BpodParameterGUI('sync',S);
     RewardAmount = GetValveTimes(S.GUI.RewardAmount, 1);
-    AirPuff =  {'ValveModule1', 1};            % Valve for AirPuff Punishment
+    AirPuff =  {'ValveModule1', 2};            % Valve for AirPuff Punishment
     
     % Tial-Specific State Matrix
     switch trialTypes(currentTrial)
         
         % CS1+
-        case 1
+        case 2
             StimulusArgument= {'ValveModule1', 8,'BNC1', 1};
-            State= 'TimeForResponse';                                  % CS1+ is not rewarded in Extinction Phase
-            LickActionState= 'LickCS1';
-            NoLickActionState= 'NoLickCS1';
+            FollowingPause= 'NothingHappens';
+            NothingTime= S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
             
         % CS3 w/ Punishment
-        case 3
-            StimulusArgument= {'ValveModule1', 4,'BNC1', 1};
-            State= 'Air Puff';
-            
+        case 5
+            StimulusArgument= {'ValveModule1', 6,'BNC1', 1};
+            FollowingPause= 'Air Puff';   
+            NothingTime= S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
     end
     
     % States Definitions   
@@ -101,12 +101,12 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
         'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
-        'OutputActions',{});    
+        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition
+        'OutputActions',{});                    
 
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
@@ -120,31 +120,21 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     sma= AddState(sma, 'Name', 'Pause',...                          % Waits for Set amount of Time (CS-ResponseWindow Delay)
         'Timer', S.GUI.PauseDuration,...
-        'StateChangeCondition', {'Tup', State},...
+        'StateChangeCondition', {'Tup', FollowingPause},...
         'OutputActions', {});
     
-    sma= AddState(sma, 'Name', 'TimeForResponse',...
-        'Timer', S.GUI.TimeForResponseDuration,...
-        'StateChangeCondition', {'Tup', NoLickActionState, 'Port1In', LickActionState},...
-        'OutputActions', {});
-    
-    sma= AddState(sma, 'Name', 'LickCS1',...
-        'Timer', S.GUI.AirPuffTime,...
-        'StateChangeCondition', {'Tup', 'EndTrial'},...
-        'OutputActions', {});
-    
-    sma= AddState(sma, 'Name', 'NoLickCS1',...
-        'Timer', S.GUI.AirPuffTime,...
-        'StateChangeCondition', {'Tup', 'EndTrial'},...
-        'OutputActions', {});
-    
-    sma = AddState(sma, 'Name', 'Punishment', ...
+    sma = AddState(sma, 'Name', 'AirPuff', ...
         'Timer', S.GUI.AirPuffTime,...
         'StateChangeConditions', {'Tup', 'EndTrial'},...
         'OutputActions', AirPuff);
-
+    
+    sma= AddState(sma, 'Name', 'NothingHappens',...
+        'Timer', NothingTime,...
+        'StateChangeCondition', {'Tup', 'EndTrial'},...
+        'OutputActions', {});
+    
     sma = AddState(sma, 'Name', 'EndTrial', ...
-        'Timer', S.GUI.EndTrialTime,...
+        'Timer', S.GUI.EndTrialLength,...
         'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
         'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
     
@@ -184,17 +174,13 @@ function UpdateTrialTypeOutcomePlot(TrialTypes, Data)
 global BpodSystem
 
 Outcomes = nan(1,Data.nTrials);
-for x = 1:Data.nTrials   
-    if TrialTypes(x) == 1 % CS+ Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.NoLickCS1(1))
-            Outcomes(x) = 1; % No Lick
-        else
-            Outcomes(x) = -1; % Lick
-        end
+for x = 1:Data.nTrials
+    if TrialTypes(x) == 2 % CS+ Trials
+        Outcomes(x) = 3;
         
-    elseif TrialTypes(x) == 3 % Punishment Trials
-            Outcomes(x) = 3;
-    end   
+    elseif TrialTypes(x) == 6 % Punishment Trials
+        Outcomes(x) = 3;
+    end
 end
 TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot,'update',Data.nTrials+1,TrialTypes,Outcomes);
 
