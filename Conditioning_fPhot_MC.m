@@ -18,13 +18,14 @@ global BpodSystem
 S = BpodSystem.ProtocolSettings; % Loads settings file chosen in launch manager into current workspace as a struct called 'S'
 
 if isempty(fieldnames(S))             
-    S.GUI.RewardAmount= 1;            % uL
-    S.GUI.PreStimulusDuration= 5; 
+    S.GUI.RewardAmount= 3;            % uL
+    S.GUI.PreStimulusDuration= 4; 
     S.GUI.StimulusDuration= 2;
     S.GUI.PauseDuration= 1;
     S.GUI.TimeForResponseDuration= 1;
-    S.GUI.DrinkingGraceDuration= 2;     
-    S.GUI.ITImin= 5;
+    S.GUI.DrinkingGraceDuration= 2;
+    S.GUI.EndTrialLength = 4;
+    S.GUI.ITImin= 4;
     S.GUI.ITImax= 8;
     S.GUI.MaxTrials= 200;
     S.GUI.mySessionTrials= 150;
@@ -72,14 +73,16 @@ for currentTrial = 1: S.GUI.mySessionTrials
         % CS+
         case 1
             StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            FollowingPause = 'TimeForResponse';
             LickActionState= 'Reward';                              % If Lick, Give Reward
-            NoLickActionState= 'EndTrial';                          % If not, end the Trial
+            NoLickActionState= 'NothingHappens';                    % If not, end the Trial
+            NothingTime = S.GUI.DrinkingGraceDuration;
            
         % CS-
         case 2
             StimulusArgument= {'ValveModule1', 7,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
-            LickActionState= 'EndTrial';                            % End the Trial
-            NoLickActionState= 'EndTrial';                          % End the Trial
+            FollowingPause = 'NothingHappens';
+            NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
     end
     
     % States Definitions
@@ -95,12 +98,12 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
         'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
-        'OutputActions',{});                                        
+        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition                  
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition
+        'OutputActions', {});                                        
 
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
@@ -114,7 +117,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     sma= AddState(sma, 'Name', 'Pause',...                          % Waits for Set amount of Time (CS-ResponseWindow Delay)
         'Timer', S.GUI.PauseDuration,...
-        'StateChangeCondition', {'Tup','TimeForResponse'},...
+        'StateChangeCondition', {'Tup', FollowingPause},...
         'OutputActions', {});
     
     sma= AddState(sma, 'Name', 'TimeForResponse',...
@@ -132,8 +135,13 @@ for currentTrial = 1: S.GUI.mySessionTrials
         'StateChangeConditions', {'Tup', 'EndTrial'},...
         'OutputActions', {});
     
+    sma= AddState(sma, 'Name', 'NothingHappens',...
+        'Timer', NothingTime,...
+        'StateChangeCondition', {'Tup', 'EndTrial'},...
+        'OutputActions', {});
+    
     sma = AddState(sma, 'Name', 'EndTrial', ...
-        'Timer', S.GUI.DrinkingGraceDuration,...
+        'Timer', S.GUI.EndTrialLength,...
         'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
         'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
         
