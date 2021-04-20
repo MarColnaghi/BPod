@@ -25,29 +25,32 @@ if isempty(fieldnames(S))
     S.GUI.TimeForResponseDuration= 1;
     S.GUI.DrinkingGraceDuration= 2;
     S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 4;
-    S.GUI.ITImax= 8;
+    S.GUI.ITImin= 17;
+    S.GUI.ITImax= 23;
     S.GUI.MaxTrials= 200;
     S.GUI.mySessionTrials= 150;
 end
 
 %% Define Trial Structure
 
-probCS0 = .40;             % Valve Click Probability
-probCS1 = .60;             % CS+ Probability
-numOfCS0 = 2*ones(1, S.GUI.mySessionTrials * probCS0);
-numOfCS1 = ones(1, S.GUI.mySessionTrials * probCS1);
-trialTypes = ([numOfCS0, numOfCS1]); 
-trialTypes = trialTypes(randperm(length(trialTypes))); % Create Trial Vector 
+CS0Trials = [50 1];                       % Valve Click - [Number of Trials, Code]
+CS1Trials_R = [95 2];                     % CS+ - [Number of Rewarded Trials, Code]
+CS1Trials_nR = [5 3];                     % CS+ - [Number of non Rewarded Trials, Code]
 
-% prob = [0.3334 0.3333 0.3333];
-% probDist= makedist('Multinomial', prob);
-% trialTypes= random(probDist, 1, S.GUI.MaxTrials); % Draw list of trials from the distribution
-% BpodSystem.Data.TrialTypes= [];                   % The trial type of each trial completed will be added here.
+numOfCS0    = CS0Trials(2)*ones(1, CS0Trials(1));
+numOfCS1_R  = CS1Trials_R(2)*ones(1, CS1Trials_R(1));
+numOfCS1_nR = CS1Trials_nR(2)*ones(1, CS1Trials_nR(1));
+
+trialTypes = ([numOfCS0, numOfCS1_R, numOfCS1_nR]);
+trialTypes = trialTypes(randperm(length(trialTypes)));               % Create Trial Vector
+
+% Ending Sequence
+endSequence = zeros(1,10);
+trialTypes  = [trialTypes endSequence];                              % Add Ending Sequence
 
 % ITI
 
-ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); % Create ITIs for each single Trial
+ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.mySessionTrials); % Create ITIs for each single Trial
 
 %% Initialize Plots
 
@@ -60,7 +63,7 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 %% Main Loop
 
-for currentTrial = 1: S.GUI.mySessionTrials
+for currentTrial = 1: S.GUI.maxTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
     RewardOutput= {'ValveState',1};            % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
@@ -70,19 +73,29 @@ for currentTrial = 1: S.GUI.mySessionTrials
     % Tial-Specific State Matrix
     switch trialTypes(currentTrial)
         
-        % CS+
+        % Valve Click
         case 1
+            StimulusArgument= {'ValveModule1', 7,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            FollowingPause = 'NothingHappens';
+            NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
+        
+        % CS+ Reward
+        case 2
             StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'TimeForResponse';
             LickActionState= 'Reward';                              % If Lick, Give Reward
             NoLickActionState= 'NothingHappens';                    % If not, end the Trial
             NothingTime = S.GUI.DrinkingGraceDuration;
-           
-        % CS-
-        case 2
-            StimulusArgument= {'ValveModule1', 7,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            
+        % CS+ no Reward
+        case 3
+            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'NothingHappens';
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
+            
+        % Exit Protocol   
+        case 0
+            RunProtocol('Stop');
     end
     
     % States Definitions
@@ -183,20 +196,23 @@ function UpdateTrialTypeOutcomePlot(TrialTypes, Data)
 global BpodSystem
 
 Outcomes = zeros(1,Data.nTrials);
-for x = 1:Data.nTrials   
-    if TrialTypes(x) == 1 % CS+ Trials
+for x = 1:Data.nTrials
+    
+    if TrialTypes(x) == 2 % CS+ Trials
         if ~isnan(Data.RawEvents.Trial{x}.States.Reward(1))
             Outcomes(x) = 1; % Licked, Reward
         else
             Outcomes(x) = -1; % No Lick
         end
         
-    elseif TrialTypes(x) == 2 % Click Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.EndTrial(1))      % No Graphical Display of Performance during Valve Clicks Trials (?)
-            Outcomes(x) = 3; % Licked
-        else
-            Outcomes(x) = 3; % No Lick
-        end
+    elseif TrialTypes(x) == 3 % CS+ no Reward Trials
+        % No Graphical Display of Performance during Valve Clicks Trials (?)
+        Outcomes(x) = 3; % Licked
+        
+    elseif TrialTypes(x) == 1 % Click Trials
+        % No Graphical Display of Performance during Valve Clicks Trials (?)
+        Outcomes(x) = 3; % Licked
+        
     end
 end
 TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot,'update',Data.nTrials+1,TrialTypes,Outcomes);
