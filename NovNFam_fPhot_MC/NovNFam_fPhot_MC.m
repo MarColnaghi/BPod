@@ -20,33 +20,25 @@ global BpodSystem
 S = BpodSystem.ProtocolSettings; % Loads settings file chosen in launch manager into current workspace as a struct called 'S'
 
 if isempty(fieldnames(S))             
-    S.GUI.RewardAmount= 3;            % uL
-    S.GUI.PreStimulusDuration= 4; 
+    S.GUI.PreStimulusDuration= 8; 
     S.GUI.StimulusDuration= 2;
-    S.GUI.PauseDuration= 1;
-    S.GUI.TimeForResponseDuration= 1;
-    S.GUI.DrinkingGraceDuration= 2;
-    S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 17;
-    S.GUI.ITImax= 23;
+    S.GUI.PostStimulusDuration = 8;
+    S.GUI.ITImin= 34;
+    S.GUI.ITImax= 54;
     S.GUI.MaxTrials= 200;
-    S.GUI.mySessionTrials= 120;
+    S.GUI.mySessionTrials= 40;
 end
 
 %% Define Trial Structure
 
 stringLength = 10;                      % Number of Consecutive Trials
-numTest = 3;                            % Number of Additional Trials (for each Odor)
-CodeOd= [1 2 3 4];                      % Codes for the Odors
-CodeOdTEST = 4;                         % Odor to employ as TEST('NEW')
+StructOd= [1 2 3 1];                    % Codes for the Odors / Define Structure
 
-for ii = 4:1
-    Od(ii,:) = CodeOd(ii)*ones(1,stringLength);
-    OdTest(ii,:) = repmat([CodeOdTEST CodeOd(ii)],1,numTest);
-end
+for ii = 1:length(StructOd)
+    trialTypes(ii,:) = repmat(StructOd(ii),1,stringLength);
+end    
 
-OdSequence = [Od OdTest]';
-trialTypes = OdSequence(:);
+trialTypes = trialTypes(:);
 
 % Ending Sequence
 endSequence = zeros(1,10);
@@ -59,7 +51,6 @@ ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); % Create ITIs for
 
 %% Initialize Plots
 
-TotalRewardDisplay('init'); % Total Reward display (online display of the total amount of liquid reward earned)
 BpodNotebook('init'); % Launches an interface to write notes about behavior and manually score trials
 BpodParameterGUI('init', S); %Initialize the Parameter GUI plugin
 BpodSystem.ProtocolFigures.TrialTypeOutcomePlotFig = figure('Position', [50 440 1000 370],'name','Outcome Plot','numbertitle','off', 'MenuBar', 'none', 'Resize', 'off');
@@ -70,7 +61,6 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 for currentTrial = 1: S.GUI.mySessionTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
-    RewardOutput= {'ValveState',1};            % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
     S = BpodParameterGUI('sync',S);
     RewardAmount = GetValveTimes(S.GUI.RewardAmount, 1);
@@ -78,26 +68,18 @@ for currentTrial = 1: S.GUI.mySessionTrials
     % Tial-Specific State Matrix
     switch trialTypes(currentTrial)
         
-        % Valve Click
+        % First Stimulus
         case 1
-            StimulusArgument= {'ValveModule1', 1,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
-            FollowingPause = 'NothingHappens';
-            NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
+            StimulusArgument= {'ValveModule1', 4,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
         
-        % CS+ Reward
+        % Second Stimulus
         case 2
-            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
-            FollowingPause = 'TimeForResponse';
-            LickActionState= 'Reward';                              % If Lick, Give Reward
-            NoLickActionState= 'NothingHappens';                    % If not, end the Trial
-            NothingTime = S.GUI.DrinkingGraceDuration;
+            StimulusArgument= {'ValveModule1', 3,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             
-        % CS+ no Reward
+        % Third Stimulus
         case 3
-            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
-            FollowingPause = 'NothingHappens';
-            NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
-            
+            StimulusArgument= {'ValveModule1', 2,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+
         % Exit Protocol   
         case 0
             RunProtocol('Stop');
@@ -109,7 +91,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.001, 'OnsetDelay', 0,...
                      'Channel', 'BNC2', 'OnLevel', 1, 'OffLevel', 0,...
-                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); 
+                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.03); 
     % Create Timer for Camera Acquisition (Set Loop Interval Properly to
     % adjust Camera Frame Rate) - 20Hz
     
@@ -130,39 +112,14 @@ for currentTrial = 1: S.GUI.mySessionTrials
 
     sma= AddState(sma, 'Name', 'StopStimulus',...
         'Timer', 0,...
-        'StateChangeCondition', {'Tup','Pause'},...
+        'StateChangeCondition', {'Tup','PostStimulus'},...
         'OutputActions', StopStimulusOutput);
     
-    sma= AddState(sma, 'Name', 'Pause',...                          % Waits for Set amount of Time (CS-ResponseWindow Delay)
-        'Timer', S.GUI.PauseDuration,...
-        'StateChangeCondition', {'Tup', FollowingPause},...
-        'OutputActions', {});
-    
-    sma= AddState(sma, 'Name', 'TimeForResponse',...
-        'Timer', S.GUI.TimeForResponseDuration,...
-        'StateChangeCondition', {'Tup', NoLickActionState, 'Port1In', LickActionState},...
-        'OutputActions', {});
-
-    sma = AddState(sma, 'Name', 'Reward', ...                       
-        'Timer', RewardAmount,...
-        'StateChangeConditions', {'Tup', 'DrinkingGrace'},...
-        'OutputActions', RewardOutput);
-
-    sma = AddState(sma, 'Name', 'DrinkingGrace', ...                % Grace period for the mouse (to let him drink)
-        'Timer', S.GUI.DrinkingGraceDuration,...
-        'StateChangeConditions', {'Tup', 'EndTrial'},...
-        'OutputActions', {});
-    
-    sma= AddState(sma, 'Name', 'NothingHappens',...
-        'Timer', NothingTime,...
+    sma= AddState(sma, 'Name', 'PostStimulus',...
+        'Timer', S.GUI.PostStimulusDuration,...
         'StateChangeCondition', {'Tup', 'EndTrial'},...
-        'OutputActions', {});
-    
-    sma = AddState(sma, 'Name', 'EndTrial', ...
-        'Timer', S.GUI.EndTrialLength,...
-        'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
-        'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
-        
+        'OutputActions', {'GlobalTimerCancel', 1});                 % Stop Camera Acquisition
+
     sma= AddState(sma, 'Name', 'InterTrialInterval',...
         'Timer', ITI(currentTrial), ...
         'StateChangeConditions', {'Tup', '>exit'},...
@@ -175,7 +132,6 @@ for currentTrial = 1: S.GUI.mySessionTrials
         BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
         BpodSystem.Data.TrialTypes(currentTrial) = trialTypes(currentTrial); % Adds the trial type of the current trial to data
         UpdateTrialTypeOutcomePlot(trialTypes, BpodSystem.Data);
-        UpdateTotalRewardDisplay(S.GUI.RewardAmount, currentTrial);
         SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
     end
     HandlePauseCondition;
@@ -201,32 +157,9 @@ function UpdateTrialTypeOutcomePlot(TrialTypes, Data)
 global BpodSystem
 
 Outcomes = zeros(1,Data.nTrials);
-for x = 1:Data.nTrials
-    
-    if TrialTypes(x) == 2 % CS+ Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.Reward(1))
-            Outcomes(x) = 1; % Licked, Reward
-        else
-            Outcomes(x) = -1; % No Lick
-        end
-        
-    elseif TrialTypes(x) == 3 % CS+ no Reward Trials
-        % No Graphical Display of Performance during Valve Clicks Trials (?)
-        Outcomes(x) = 3; % Licked
-        
-    elseif TrialTypes(x) == 1 % Click Trials
-        % No Graphical Display of Performance during Valve Clicks Trials (?)
-        Outcomes(x) = 3; % Licked
-        
-    end
+for x = 1:Data.nTrials  
+    Outcomes(x) = 3; % Licked, Reward
 end
 TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot,'update',Data.nTrials+1,TrialTypes,Outcomes);
 
-function UpdateTotalRewardDisplay(RewardAmount, currentTrial)
-% If rewarded based on the state data, update the TotalRewardDisplay
-global BpodSystem
-if ~isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.Reward(1))
-    TotalRewardDisplay('add', RewardAmount);
-end
- 
 
