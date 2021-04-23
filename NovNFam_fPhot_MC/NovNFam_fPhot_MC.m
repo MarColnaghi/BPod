@@ -23,8 +23,8 @@ if isempty(fieldnames(S))
     S.GUI.PreStimulusDuration= 8; 
     S.GUI.StimulusDuration= 2;
     S.GUI.PostStimulusDuration = 8;
-    S.GUI.ITImin= 34;
-    S.GUI.ITImax= 54;
+    S.GUI.ITImin= 39;
+    S.GUI.ITImax= 49;
     S.GUI.MaxTrials= 200;
     S.GUI.mySessionTrials= 40;
 end
@@ -33,15 +33,16 @@ end
 
 stringLength = 10;                      % Number of Consecutive Trials
 StructOd= [1 2 3 1];                    % Codes for the Odors / Define Structure
+trialTypes = [];
 
 for ii = 1:length(StructOd)
-    trialTypes(ii,:) = repmat(StructOd(ii),1,stringLength);
+    trialTypes(:,ii) = repmat(StructOd(ii),1,stringLength);
 end    
 
 trialTypes = trialTypes(:);
 
 % Ending Sequence
-endSequence = zeros(1,10);
+endSequence = zeros(1,20);
 trialTypes  = [trialTypes' endSequence];  
 
 % ITI
@@ -63,22 +64,21 @@ for currentTrial = 1: S.GUI.mySessionTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
     S = BpodParameterGUI('sync',S);
-    RewardAmount = GetValveTimes(S.GUI.RewardAmount, 1);
     
     % Tial-Specific State Matrix
     switch trialTypes(currentTrial)
         
         % First Stimulus
         case 1
-            StimulusArgument= {'ValveModule1', 4,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1',1,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
         
         % Second Stimulus
         case 2
-            StimulusArgument= {'ValveModule1', 3,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 4,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             
         % Third Stimulus
         case 3
-            StimulusArgument= {'ValveModule1', 2,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 3,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
 
         % Exit Protocol   
         case 0
@@ -98,13 +98,13 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
         'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
-        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition                  
+        'OutputActions',{});                                   
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions', {});                                        
-
+        'OutputActions', {'GlobalTimerTrig', 1});                   % Starts Camera Acquisition                                   
+    
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
         'StateChangeCondition', {'Tup','StopStimulus'},...
@@ -113,17 +113,17 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= AddState(sma, 'Name', 'StopStimulus',...
         'Timer', 0,...
         'StateChangeCondition', {'Tup','PostStimulus'},...
-        'OutputActions', StopStimulusOutput);
+        'OutputActions', StopStimulusOutput); 
     
     sma= AddState(sma, 'Name', 'PostStimulus',...
         'Timer', S.GUI.PostStimulusDuration,...
-        'StateChangeCondition', {'Tup', 'EndTrial'},...
-        'OutputActions', {'GlobalTimerCancel', 1});                 % Stop Camera Acquisition
+        'StateChangeCondition', {'Tup', 'InterTrialInterval'},...
+        'OutputActions', {});                                     
 
     sma= AddState(sma, 'Name', 'InterTrialInterval',...
         'Timer', ITI(currentTrial), ...
         'StateChangeConditions', {'Tup', '>exit'},...
-        'OutputActions', {});
+        'OutputActions', {'GlobalTimerCancel', 1});                   % Stop Camera Acquisition
     
     SendStateMatrix(sma);
     RawEvents= RunStateMatrix; 
