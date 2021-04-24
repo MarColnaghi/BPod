@@ -68,15 +68,15 @@ for currentTrial = 1: S.GUI.mySessionTrials
     % Tial-Specific State Matrix
     switch trialTypes(currentTrial)
         
-        % First Stimulus
+        % First Stimulus - Eugenol
         case 1
             StimulusArgument= {'ValveModule1',1,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
         
-        % Second Stimulus
+        % Second Stimulus - gamma-Delactone
         case 2
             StimulusArgument= {'ValveModule1', 4,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             
-        % Third Stimulus
+        % Third Stimulus - Eucalyptol
         case 3
             StimulusArgument= {'ValveModule1', 3,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
 

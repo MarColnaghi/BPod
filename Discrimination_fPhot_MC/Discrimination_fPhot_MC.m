@@ -39,7 +39,7 @@ numOfTrials = 40;
 pReward = .95;
 
 numOfCS1_R = 2*ones(1, numOfTrials *pReward);
-numOfCS1_nR = 3*ones(1, numOfTrials *(1-pReward));
+numOfCS1_nR = 3*ones(1, round(numOfTrials *(1-pReward)));
 numOfCS2 = 4*ones(1, numOfTrials);
 numOfCS3 = 5*ones(1, numOfTrials);
 
@@ -77,31 +77,37 @@ for currentTrial = 1: S.GUI.mySessionTrials
         
         % CS1+ Reward
         case 2
-            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'TimeForResponse';
             LickActionState= 'Reward';                              % If Lick, Give Reward
             NoLickActionState= 'NothingHappens';                    % If not, end the Trial
             NothingTime = S.GUI.DrinkingGraceDuration;
             
-        % CS1+ no Reward
+            % CS1+ no Reward
         case 3
-            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'NothingHappens';
+            NoLickActionState= 'NothingHappens';
+            LickActionState= 'NothingHappens';
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
             
-        % CS2-
+            % CS2-
         case 4
-            StimulusArgument= {'ValveModule1', 7,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
-            FollowingPause = 'NothingHappens';                      % End the Trial
-            NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;                     
-        
-        % CS3-
-        case 5
             StimulusArgument= {'ValveModule1', 6,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'NothingHappens';                      % End the Trial
+            NoLickActionState= 'NothingHappens';
+            LickActionState= 'NothingHappens';
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
-                        
-        % Exit Protocol   
+            
+            % CS3-
+        case 5
+            StimulusArgument= {'ValveModule1', 7,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            FollowingPause = 'NothingHappens';                      % End the Trial
+            NoLickActionState= 'NothingHappens';
+            LickActionState= 'NothingHappens';
+            NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
+            
+            % Exit Protocol
         case 0
             RunProtocol('Stop');
     end

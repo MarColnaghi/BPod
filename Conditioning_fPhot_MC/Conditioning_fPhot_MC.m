@@ -75,13 +75,13 @@ for currentTrial = 1: S.GUI.mySessionTrials
         
         % Valve Click
         case 1
-            StimulusArgument= {'ValveModule1', 1,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'NothingHappens';
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
         
         % CS+ Reward
         case 2
-            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'TimeForResponse';
             LickActionState= 'Reward';                              % If Lick, Give Reward
             NoLickActionState= 'NothingHappens';                    % If not, end the Trial
@@ -89,7 +89,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
             
         % CS+ no Reward
         case 3
-            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'NothingHappens';
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
             
