@@ -25,8 +25,8 @@ if isempty(fieldnames(S))
     S.GUI.TimeForResponseDuration= 1;
     S.GUI.DrinkingGraceDuration= 2;
     S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 1;
-    S.GUI.ITImax= 2;
+    S.GUI.ITImin= 5;
+    S.GUI.ITImax= 6;
     S.GUI.MaxTrials= 200;
     S.GUI.mySessionTrials= 150;
 end
@@ -65,7 +65,7 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 for currentTrial = 1: S.GUI.mySessionTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
-    RewardOutput= {'ValveState',1};            % Open Water Valve
+    RewardOutput= {'ValveState',1, 'BNC1', 1}; % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
     S = BpodParameterGUI('sync',S);
     RewardAmount = GetValveTimes(S.GUI.RewardAmount, 1);
@@ -100,23 +100,17 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     % States Definitions
     
-    sma= NewStateMachine(); % Initialize new state machine description
-    
-    sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.001, 'OnsetDelay', 0,...
-                     'Channel', 'BNC2', 'OnLevel', 1, 'OffLevel', 0,...
-                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); 
-    % Create Timer for Camera Acquisition (Set Loop Interval Properly to
-    % adjust Camera Frame Rate) - 20Hz
+    sma= NewStateMachine(); % Initialize new state machine description    
     
     sma= AddState(sma, 'Name', 'StartTrial',...
-        'Timer', 5,...
+        'Timer', 10,...
         'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
         'OutputActions',{});                                                    
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions', {'GlobalTimerTrig', 1});                   % Starts Camera Acquisition                            
+        'OutputActions', {'BNC2', 1});                              % Starts Camera Acquisition                         
 
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
@@ -161,7 +155,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= AddState(sma, 'Name', 'InterTrialInterval',...
         'Timer', ITI(currentTrial), ...
         'StateChangeConditions', {'Tup', '>exit'},...
-        'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
+        'OutputActions', {});                 
     
     SendStateMatrix(sma);
     RawEvents= RunStateMatrix;

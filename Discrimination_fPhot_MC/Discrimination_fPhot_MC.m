@@ -67,7 +67,7 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 for currentTrial = 1: S.GUI.mySessionTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
-    RewardOutput= {'ValveState',1};            % Open Water Valve
+    RewardOutput= {'ValveState',1, 'BNC1', 1}; % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
     S = BpodParameterGUI('sync',S);
     RewardAmount = GetValveTimes(S.GUI.RewardAmount, 1);
@@ -116,22 +116,16 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     
     sma= NewStateMachine(); % Initialize new state machine description
-    
-    sma = SetGlobalTimer(sma, 'TimerID', 1, 'Duration', 0.001, 'OnsetDelay', 0,...
-                     'Channel', 'BNC2', 'OnLevel', 1, 'OffLevel', 0,...
-                     'Loop', 1, 'SendGlobalTimerEvents', 0, 'LoopInterval', 0.02); 
-    % Create Timer for Camera Acquisition (Set Loop Interval Properly to
-    % adjust Camera Frame Rate) - 20 Hz
                  
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
         'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
-        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition                                              
+        'OutputActions',{});                                                                                      
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions',{});
+        'OutputActions', {'BNC2', 1});                              % Starts Camera Acquisition           
 
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
@@ -209,7 +203,7 @@ function UpdateTrialTypeOutcomePlot(TrialTypes, Data)
 global BpodSystem
 
 Outcomes = nan(1,Data.nTrials);
-for x = 1:Data.nTrials   
+for x = 1:Data.nTrials
     if TrialTypes(x) == 2 % CS+ Trials
         if ~isnan(Data.RawEvents.Trial{x}.States.Reward(1))
             Outcomes(x) = 1; % Licked, Reward
@@ -219,16 +213,12 @@ for x = 1:Data.nTrials
         
     elseif TrialTypes(x) == 3 % CS+ no Reward Trials
         % No Graphical Display of Performance during Valve Clicks Trials (?)
-        Outcomes(x) = 3; % Licked
+        Outcomes(x) = 3;
         
- 
-    elseif TrialTypes(x) == 2 || TrialTypes(x) == 3 % CS- Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.EndTrial(1))      
-            % No Graphical Display of Performance during Valve Clicks Trials (?)
-            Outcomes(x) = 3;
-        else
-            Outcomes(x) = 3;
-        end
+        
+    elseif TrialTypes(x) == 4 || TrialTypes(x) == 5 % CS- Trials
+        % No Graphical Display of Performance during Valve Clicks Trials (?)
+        Outcomes(x) = 3;
     end
     
 end

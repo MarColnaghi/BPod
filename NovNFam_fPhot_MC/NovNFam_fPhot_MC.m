@@ -70,7 +70,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
         
         % First Stimulus - Eugenol
         case 1
-            StimulusArgument= {'ValveModule1',1,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
+            StimulusArgument= {'ValveModule1', 1,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
         
         % Second Stimulus - gamma-Delactone
         case 2
@@ -97,7 +97,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions', {'BNC2', 1});                                       % Starts Camera Acquisition                                   
+        'OutputActions', {'BNC2', 1});                              % Starts Camera Acquisition                                   
     
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
