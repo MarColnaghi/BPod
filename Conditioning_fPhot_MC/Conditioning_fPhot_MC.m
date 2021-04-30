@@ -28,7 +28,7 @@ if isempty(fieldnames(S))
     S.GUI.ITImin= 1;
     S.GUI.ITImax= 2;
     S.GUI.MaxTrials= 200;
-    S.GUI.mySessionTrials= 55;
+    S.GUI.mySessionTrials= 150;
 end
 
 %% Define Trial Structure
@@ -111,12 +111,12 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= AddState(sma, 'Name', 'StartTrial',...
         'Timer', 5,...
         'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
-        'OutputActions',{'GlobalTimerTrig', 1});                    % Starts Camera Acquisition                  
+        'OutputActions',{});                                                    
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
         'Timer', S.GUI.PreStimulusDuration,...
         'StateChangeCondition', {'Tup','DeliverStimulus'},...
-        'OutputActions', {});                                        
+        'OutputActions', {'GlobalTimerTrig', 1});                   % Starts Camera Acquisition                            
 
     sma= AddState(sma, 'Name', 'DeliverStimulus',...
         'Timer', S.GUI.StimulusDuration,...
@@ -156,15 +156,15 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma = AddState(sma, 'Name', 'EndTrial', ...
         'Timer', S.GUI.EndTrialLength,...
         'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
-        'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
-        
+        'OutputActions', {});
+    
     sma= AddState(sma, 'Name', 'InterTrialInterval',...
         'Timer', ITI(currentTrial), ...
         'StateChangeConditions', {'Tup', '>exit'},...
-        'OutputActions', {});
+        'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
     
     SendStateMatrix(sma);
-    RawEvents= RunStateMatrix; 
+    RawEvents= RunStateMatrix;
     if ~isempty(fieldnames(RawEvents)) % If trial data was returned (i.e. if not final trial, interrupted by user)
         BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
         BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)

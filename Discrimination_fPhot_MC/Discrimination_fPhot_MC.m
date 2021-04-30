@@ -27,8 +27,8 @@ if isempty(fieldnames(S))
     S.GUI.TimeForResponseDuration= 1;
     S.GUI.DrinkingGraceDuration= 2;
     S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 17;
-    S.GUI.ITImax= 23;
+    S.GUI.ITImin= 1%17;
+    S.GUI.ITImax= 2%23;
     S.GUI.MaxTrials= 200;
     S.GUI.mySessionTrials= 120;
 end
