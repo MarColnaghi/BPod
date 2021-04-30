@@ -25,8 +25,8 @@ if isempty(fieldnames(S))
     S.GUI.TimeForResponseDuration= 1;
     S.GUI.DrinkingGraceDuration= 2;
     S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 5;
-    S.GUI.ITImax= 6;
+    S.GUI.ITImin= 5; %17
+    S.GUI.ITImax= 6; %23
     S.GUI.MaxTrials= 200;
     S.GUI.mySessionTrials= 150;
 end
@@ -90,7 +90,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
         % CS+ no Reward
         case 3
             StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
-            FollowingPause = 'NothingHappens';
+            FollowingPause = 'NothingHappens';                      % No reward given
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
             
         % Exit Protocol   

@@ -27,8 +27,8 @@ if isempty(fieldnames(S))
     S.GUI.TimeForResponseDuration= 1;
     S.GUI.DrinkingGraceDuration= 2;
     S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 1%17;
-    S.GUI.ITImax= 2%23;
+    S.GUI.ITImin= 5; %17
+    S.GUI.ITImax= 6; %23
     S.GUI.MaxTrials= 200;
     S.GUI.mySessionTrials= 120;
 end
@@ -86,7 +86,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
             % CS1+ no Reward
         case 3
             StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
-            FollowingPause = 'NothingHappens';
+            FollowingPause = 'NothingHappens';                      % End the Trial
             NoLickActionState= 'NothingHappens';
             LickActionState= 'NothingHappens';
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
@@ -118,7 +118,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma= NewStateMachine(); % Initialize new state machine description
                  
     sma= AddState(sma, 'Name', 'StartTrial',...
-        'Timer', 5,...
+        'Timer', 10,...
         'StateChangeCondition', {'BNC1High', 'PreStimulus'},...     % Wait for incoming TTL from Photometry System to start the Trial
         'OutputActions',{});                                                                                      
     
@@ -139,7 +139,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     sma= AddState(sma, 'Name', 'Pause',...                          % Waits for Set amount of Time (CS-ResponseWindow Delay)
         'Timer', S.GUI.PauseDuration,...
-        'StateChangeCondition', {'Tup',FollowingPause},...
+        'StateChangeCondition', {'Tup', FollowingPause},...
         'OutputActions', {});
     
     sma= AddState(sma, 'Name', 'TimeForResponse',...
@@ -165,7 +165,7 @@ for currentTrial = 1: S.GUI.mySessionTrials
     sma = AddState(sma, 'Name', 'EndTrial', ...
         'Timer', S.GUI.EndTrialLength,...
         'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
-        'OutputActions', {'GlobalTimerCancel', 1});                 % Stops Camera Acquisition
+        'OutputActions', {});               
         
     sma= AddState(sma, 'Name', 'InterTrialInterval',...
         'Timer', ITI(currentTrial), ...
