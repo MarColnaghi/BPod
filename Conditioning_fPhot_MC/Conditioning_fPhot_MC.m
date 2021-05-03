@@ -18,15 +18,15 @@ global BpodSystem
 S = BpodSystem.ProtocolSettings; % Loads settings file chosen in launch manager into current workspace as a struct called 'S'
 
 if isempty(fieldnames(S))             
-    S.GUI.RewardAmount= 3;            % uL
+    S.GUI.RewardAmount= 2;            % uL
     S.GUI.PreStimulusDuration= 4; 
     S.GUI.StimulusDuration= 2;
     S.GUI.PauseDuration= 1;
     S.GUI.TimeForResponseDuration= 1;
     S.GUI.DrinkingGraceDuration= 2;
     S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 5; %17
-    S.GUI.ITImax= 6; %23
+    S.GUI.ITImin= 12;
+    S.GUI.ITImax= 16;
     S.GUI.MaxTrials= 200;
     S.GUI.mySessionTrials= 150;
 end
@@ -45,7 +45,7 @@ trialTypes = ([numOfCS0, numOfCS1_R, numOfCS1_nR]);
 trialTypes = trialTypes(randperm(length(trialTypes)));               % Create Trial Vector
 
 % Ending Sequence
-endSequence = zeros(1,10);
+endSequence = zeros(1,50);
 trialTypes  = [trialTypes endSequence];                              % Add Ending Sequence
 
 % ITI
@@ -63,7 +63,7 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 %% Main Loop
 
-for currentTrial = 1: S.GUI.mySessionTrials
+for currentTrial = 1: S.GUI.MaxTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
     RewardOutput= {'ValveState',1, 'BNC1', 1}; % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
@@ -77,6 +77,8 @@ for currentTrial = 1: S.GUI.mySessionTrials
         case 1
             StimulusArgument= {'ValveModule1', 8,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'NothingHappens';
+            NoLickActionState= 'NothingHappens';
+            LickActionState= 'NothingHappens';
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
         
         % CS+ Reward
@@ -91,6 +93,8 @@ for currentTrial = 1: S.GUI.mySessionTrials
         case 3
             StimulusArgument= {'ValveModule1', 5,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'NothingHappens';                      % No reward given
+            NoLickActionState= 'NothingHappens';
+            LickActionState= 'NothingHappens';
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
             
         % Exit Protocol   

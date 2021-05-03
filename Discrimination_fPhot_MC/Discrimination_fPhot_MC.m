@@ -20,7 +20,7 @@ global BpodSystem
 S = BpodSystem.ProtocolSettings; % Loads settings file chosen in launch manager into current workspace as a struct called 'S'
 
 if isempty(fieldnames(S))             
-    S.GUI.RewardAmount= 3;            % uL
+    S.GUI.RewardAmount= 2;            % uL
     S.GUI.PreStimulusDuration= 4; 
     S.GUI.StimulusDuration= 2;
     S.GUI.PauseDuration= 1;
