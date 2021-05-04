@@ -50,7 +50,7 @@ trialTypes  = [trialTypes endSequence];                              % Add Endin
 
 % ITI
 
-ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.mySessionTrials); % Create ITIs for each single Trial
+ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); % Create ITIs for each single Trial
 
 %% Initialize Plots
 

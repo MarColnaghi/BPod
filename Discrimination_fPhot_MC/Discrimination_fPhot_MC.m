@@ -27,9 +27,9 @@ if isempty(fieldnames(S))
     S.GUI.TimeForResponseDuration= 1;
     S.GUI.DrinkingGraceDuration= 2;
     S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 5; %17
-    S.GUI.ITImax= 6; %23
-    S.GUI.MaxTrials= 200;
+    S.GUI.ITImin= 12; %17
+    S.GUI.ITImax= 16; %23
+    S.GUI.MaxTrials= 170;
     S.GUI.mySessionTrials= 120;
 end
 
@@ -47,7 +47,7 @@ trialTypes = ([numOfCS1_R, numOfCS1_nR, numOfCS2, numOfCS3]);
 trialTypes = trialTypes(randperm(length(trialTypes))); 
 
 % Ending Sequence
-endSequence = zeros(1,10);
+endSequence = zeros(1,50);
 trialTypes  = [trialTypes endSequence];  
 
 % ITI
@@ -65,7 +65,7 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 %% Main Loop
 
-for currentTrial = 1: S.GUI.mySessionTrials
+for currentTrial = 1: S.MaxTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
     RewardOutput= {'ValveState',1, 'BNC1', 1}; % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
