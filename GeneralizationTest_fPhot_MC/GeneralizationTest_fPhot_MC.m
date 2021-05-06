@@ -24,8 +24,8 @@ if isempty(fieldnames(S))
     S.GUI.TimeForResponseDuration= 1;
     S.GUI.DrinkingGraceDuration= 2;
     S.GUI.EndTrialLength = 4;
-    S.GUI.ITImin= 12;
-    S.GUI.ITImax= 16;
+    S.GUI.ITImin= 5;
+    S.GUI.ITImax= 8;
     S.GUI.MaxTrials= 50;
     S.GUI.mySessionTrials= 15;
 end
@@ -62,7 +62,7 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 for currentTrial = 1: S.GUI.MaxTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
-    RewardOutput= {'ValveState',1};            % Open Water Valve
+    RewardOutput= {'ValveState',1, 'BNC1', 1}; % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
     S = BpodParameterGUI('sync',S);
     RewardAmount = GetValveTimes(S.GUI.RewardAmount, 1);
