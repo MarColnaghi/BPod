@@ -50,7 +50,6 @@ ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); % Create ITIs for
 
 %% Initialize Plots
 
-TotalRewardDisplay('init'); % Total Reward display (online display of the total amount of liquid reward earned)
 BpodNotebook('init'); % Launches an interface to write notes about behavior and manually score trials
 BpodParameterGUI('init', S); %Initialize the Parameter GUI plugin
 BpodSystem.ProtocolFigures.TrialTypeOutcomePlotFig = figure('Position', [50 440 1000 370],'name','Outcome Plot','numbertitle','off', 'MenuBar', 'none', 'Resize', 'off');
@@ -148,7 +147,6 @@ for currentTrial = 1: S.GUI.MaxTrials
         BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
         BpodSystem.Data.TrialTypes(currentTrial) = trialTypes(currentTrial); % Adds the trial type of the current trial to data
         UpdateTrialTypeOutcomePlot(trialTypes, BpodSystem.Data);
-        UpdateTotalRewardDisplay(S.GUI.RewardAmount, currentTrial);
         SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
     end
     HandlePauseCondition;
@@ -176,11 +174,7 @@ global BpodSystem
 Outcomes = nan(1,Data.nTrials);
 for x = 1:Data.nTrials
     if TrialTypes(x) == 2 % CS+ Trials
-        if ~isnan(Data.RawEvents.Trial{x}.States.Reward(1))
-            Outcomes(x) = 1; % Licked, Reward
-        else
-            Outcomes(x) = -1; % No Lick
-        end
+        Outcomes(x) = 3;
         
     elseif TrialTypes(x) == 3 % CS+ no Reward Trials
         % No Graphical Display of Performance during Valve Clicks Trials (?)
@@ -195,11 +189,3 @@ for x = 1:Data.nTrials
 end
 TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot,'update',Data.nTrials+1,TrialTypes,Outcomes);
 
-
-function UpdateTotalRewardDisplay(RewardAmount, currentTrial)
-% If rewarded based on the state data, update the TotalRewardDisplay
-global BpodSystem
-if ~isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.Reward(1))
-    TotalRewardDisplay('add', RewardAmount);
-end
- 
