@@ -52,7 +52,6 @@ ITI = randi([S.GUI.ITImin, S.GUI.ITImax], 1, S.GUI.MaxTrials); % Create ITIs for
 
 %% Initialize Plots
 
-TotalRewardDisplay('init'); % Total Reward display (online display of the total amount of liquid reward earned)
 BpodNotebook('init'); % Launches an interface to write notes about behavior and manually score trials
 BpodParameterGUI('init', S); %Initialize the Parameter GUI plugin
 BpodSystem.ProtocolFigures.TrialTypeOutcomePlotFig = figure('Position', [50 440 1000 370],'name','Outcome Plot','numbertitle','off', 'MenuBar', 'none', 'Resize', 'off');
@@ -65,21 +64,21 @@ for currentTrial = 1: S.GUI.MaxTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
     S = BpodParameterGUI('sync',S);
-    AirPuff =  {'ValveState',3};            % Valve for AirPuff Punishment
+    AirPuff =  {'Valve3',1,'BNC1', 1};            % Valve for AirPuff Punishment
     
     % Tial-Specific State Matrix
     switch trialTypes(currentTrial)
         
         % CS1+
         case 2
-            StimulusArgument= {'ValveModule1', 8,'BNC1', 1};
+            StimulusArgument= {'ValveModule1', 5,'BNC1', 1};
             FollowingPause= 'NothingHappens';
             NothingLength = S.GUI.AirPuffTime + S.GUI.NothingTime;
             
         % CS3 w/ Punishment
         case 5
             StimulusArgument= {'ValveModule1', 6,'BNC1', 1};
-            FollowingPause= 'Air Puff';
+            FollowingPause= 'AirPuff';
             NothingLength = S.GUI.NothingTime;
     end
     
@@ -140,7 +139,6 @@ for currentTrial = 1: S.GUI.MaxTrials
         BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
         BpodSystem.Data.TrialTypes(currentTrial) = trialTypes(currentTrial); % Adds the trial type of the current trial to data
         UpdateTrialTypeOutcomePlot(trialTypes, BpodSystem.Data);
-        UpdateTotalRewardDisplay(S.GUI.RewardAmount, currentTrial);
         SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
     end
     HandlePauseCondition;
@@ -168,17 +166,11 @@ for x = 1:Data.nTrials
     if TrialTypes(x) == 2 % CS+ Trials
         Outcomes(x) = 3;
         
-    elseif TrialTypes(x) == 6 % Punishment Trials
+    elseif TrialTypes(x) == 5 % Punishment Trials
         Outcomes(x) = 3;
     end
 end
 TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot,'update',Data.nTrials+1,TrialTypes,Outcomes);
 
-function UpdateTotalRewardDisplay(RewardAmount, currentTrial)
-% If rewarded based on the state data, update the TotalRewardDisplay
-global BpodSystem
-if ~isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.Reward(1))
-    TotalRewardDisplay('add', RewardAmount);
-end
  
 
