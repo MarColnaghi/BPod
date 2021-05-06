@@ -18,7 +18,7 @@ global BpodSystem
 S = BpodSystem.ProtocolSettings; % Loads settings file chosen in launch manager into current workspace as a struct called 'S'
 
 if isempty(fieldnames(S))             
-    S.GUI.RewardAmount= 2;            % uL
+    S.GUI.RewardAmount= 3;            % uL
     S.GUI.PreStimulusDuration= 4; 
     S.GUI.StimulusDuration= 2;
     S.GUI.PauseDuration= 1;
@@ -33,9 +33,9 @@ end
 
 %% Define Trial Structure
 
-CS0Trials = [50 1];                       % Valve Click - [Number of Trials, Code]
-CS1Trials_R = [95 2];                     % CS+ - [Number of Rewarded Trials, Code]
-CS1Trials_nR = [5 3];                     % CS+ - [Number of non Rewarded Trials, Code]
+CS0Trials = [30 1];                       % Valve Click - [Number of Trials, Code]
+CS1Trials_R = [114 2];                     % CS+ - [Number of Rewarded Trials, Code]
+CS1Trials_nR = [6 3];                     % CS+ - [Number of non Rewarded Trials, Code]
 
 numOfCS0    = CS0Trials(2)*ones(1, CS0Trials(1));
 numOfCS1_R  = CS1Trials_R(2)*ones(1, CS1Trials_R(1));
