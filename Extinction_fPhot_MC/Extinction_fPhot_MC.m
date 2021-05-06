@@ -20,22 +20,21 @@ global BpodSystem
 S = BpodSystem.ProtocolSettings; % Loads settings file chosen in launch manager into current workspace as a struct called 'S'
 
 if isempty(fieldnames(S))             
-    S.GUI.RewardAmount= 3;            % uL
     S.GUI.PreStimulusDuration= 4; 
     S.GUI.StimulusDuration= 2;
     S.GUI.PauseDuration= 1;
-    S.GUI.AirPuffTime= 2;
+    S.GUI.AirPuffTime= 1;
     S.GUI.NothingTime = 2;
     S.GUI.EndTrialLength= 4;
-    S.GUI.ITImin= 17;
-    S.GUI.ITImax= 23;
-    S.GUI.MaxTrials= 200;
-    S.GUI.mySessionTrials= 80;
+    S.GUI.ITImin= 5;
+    S.GUI.ITImax= 8;
+    S.GUI.MaxTrials= 100;
+    S.GUI.mySessionTrials= 60;
 end
 
 %% Define Trial Structure
 
-numOfTrials = 40;
+numOfTrials = 30;
 
 numOfCS1 = 2*ones(1, numOfTrials);
 numOfCS3 = 5*ones(1, numOfTrials);
@@ -44,7 +43,7 @@ trialTypes = ([numOfCS1 numOfCS3]);
 trialTypes = trialTypes(randperm(length(trialTypes))); 
 
 % Ending Sequence
-endSequence = zeros(1,10);
+endSequence = zeros(1,40);
 trialTypes  = [trialTypes endSequence]; 
 
 % ITI
@@ -62,13 +61,11 @@ TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot, 'init', trialTy
 
 %% Main Loop
 
-for currentTrial = 1: S.GUI.mySessionTrials
+for currentTrial = 1: S.GUI.MaxTrials
     LoadSerialMessages('ValveModule1', {['B' 1], ['B' 2], ['B' 4], ['B' 8], ['B' 16], ['B' 32], ['B' 64], ['B' 128], ['B' 0]});
-    RewardOutput= {'ValveState',1};            % Open Water Valve
     StopStimulusOutput= {'ValveModule1', 9};   % Close all the Valves
     S = BpodParameterGUI('sync',S);
-    RewardAmount = GetValveTimes(S.GUI.RewardAmount, 1);
-    AirPuff =  {'ValveModule1', 2, 'BNC1', 1};            % Valve for AirPuff Punishment
+    AirPuff =  {'ValveState',3};            % Valve for AirPuff Punishment
     
     % Tial-Specific State Matrix
     switch trialTypes(currentTrial)
@@ -77,11 +74,13 @@ for currentTrial = 1: S.GUI.mySessionTrials
         case 2
             StimulusArgument= {'ValveModule1', 8,'BNC1', 1};
             FollowingPause= 'NothingHappens';
+            NothingLength = S.GUI.AirPuffTime + S.GUI.NothingTime;
             
         % CS3 w/ Punishment
         case 5
             StimulusArgument= {'ValveModule1', 6,'BNC1', 1};
-            FollowingPause= 'Air Puff';   
+            FollowingPause= 'Air Puff';
+            NothingLength = S.GUI.NothingTime;
     end
     
     % States Definitions   
@@ -116,11 +115,11 @@ for currentTrial = 1: S.GUI.mySessionTrials
     
     sma = AddState(sma, 'Name', 'AirPuff', ...
         'Timer', S.GUI.AirPuffTime,...
-        'StateChangeConditions', {'Tup', 'EndTrial'},...
+        'StateChangeConditions', {'Tup', 'NothingHappens'},...
         'OutputActions', AirPuff);
     
     sma= AddState(sma, 'Name', 'NothingHappens',...
-        'Timer', NothingTime,...
+        'Timer', NothingLength,...
         'StateChangeCondition', {'Tup', 'EndTrial'},...
         'OutputActions', {});
     
