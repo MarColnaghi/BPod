@@ -75,7 +75,7 @@ for currentTrial = 1 : S.GUI.MaxTrials
         % Valve Click
         case 1 
             StateName= 'ValveClick';
-            StimulusArgument= {'ValveModule1', 2, 'BNC1', 1};
+            StimulusArgument= {'ValveModule1', 8, 'BNC1', 1};
         
         % Reward    
         case 2 
