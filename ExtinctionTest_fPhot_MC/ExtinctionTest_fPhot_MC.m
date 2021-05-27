@@ -72,7 +72,7 @@ for currentTrial = 1: S.GUI.MaxTrials
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
             
             % CS2-
-        case 4
+        case 5
             StimulusArgument= {'ValveModule1', 6,'BNC1', 1};        % Send TTL to DAQ (Stimulus Delivery)
             FollowingPause = 'NothingHappens';                      % End the Trial
             NothingTime = S.GUI.DrinkingGraceDuration + S.GUI.TimeForResponseDuration;
