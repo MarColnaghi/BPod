@@ -23,7 +23,7 @@ S = BpodSystem.ProtocolSettings;
 if isempty(fieldnames(S))
     S.GUI.RewardAmount = 2;
     S.GUI.StimulusDuration= 2;
-    S.GUI.MaxTrials = 30;
+    S.GUI.MaxTrials = 300;
     S.GUI.ITImin = 5;
     S.GUI.ITImax = 10;
 
@@ -101,13 +101,13 @@ for currentTrial = 1 : S.GUI.MaxTrials
         'OutputActions', StopStimulusOutput);
 
     sma = AddState(sma, 'Name', 'Reward', ...
-        'Timer', ValveTime,...
+        'Timer', RewardAmount,...
         'StateChangeConditions', {'Tup', 'DrinkingGrace'},...
         'OutputActions', RewardOutput);
     
     sma = AddState(sma, 'Name', 'DrinkingGrace', ...
         'Timer', S.GUI.StimulusDuration,...
-        'StateChangeConditions', {'Tup', 'ITI'},...
+        'StateChangeConditions', {'Tup', 'InterTrialInterval'},...
         'OutputActions', {});
         
     sma = AddState(sma, 'Name', 'InterTrialInterval', ...
@@ -123,6 +123,7 @@ for currentTrial = 1 : S.GUI.MaxTrials
         BpodSystem.Data.TrialSettings(currentTrial) = S; %Add a snapshot of the current settings struct, for a record of the parameters used for the current trial.
         BpodSystem.Data.TrialTypes(currentTrial) = trialTypes(currentTrial); % Adds the trial type of the current trial to data
         UpdateTotalRewardDisplay(S.GUI.RewardAmount, currentTrial);
+        UpdateTrialTypeOutcomePlot(trialTypes, BpodSystem.Data);
         SaveBpodSessionData; %Save the data struct to the current data file.
     end
     HandlePauseCondition; %If the user has pressed the "Pause" button on the Bpod console, wait here until the session is resumed
@@ -136,9 +137,30 @@ for currentTrial = 1 : S.GUI.MaxTrials
     end
 end
 
+function UpdateTrialTypeOutcomePlot(TrialTypes, Data)
+% Determine outcomes from state data and score as the SideOutcomePlot plugin expects
+
+global BpodSystem
+
+Outcomes = zeros(1,Data.nTrials);
+for x = 1:Data.nTrials
+    
+    
+    if TrialTypes(x) == 1 % CS+ no Reward Trials
+        % No Graphical Display of Performance during Valve Clicks Trials (?)
+        Outcomes(x) = 3; % Licked
+        
+    elseif TrialTypes(x) == 2 % Click Trials
+        % No Graphical Display of Performance during Valve Clicks Trials (?)
+        Outcomes(x) = 3; % Licked
+        
+    end
+end
+TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot,'update',Data.nTrials+1,TrialTypes,Outcomes);
+
 function UpdateTotalRewardDisplay(RewardAmount, currentTrial)
 % If rewarded based on the state data, update the TotalRewardDisplay
 global BpodSystem
-if ~isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.RewardDelivery(1))
+if ~isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.Reward(1))
     TotalRewardDisplay('add', RewardAmount);
 end
