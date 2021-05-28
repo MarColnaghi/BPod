@@ -36,12 +36,12 @@ end
 %% Define Trial Structure
 
 CS0Trials = [75 1];                       % Valve Click - [Number of Trials, Code]
-CS1Trials_R = [75 2];                     % CS+ - [Number of Rewarded Trials, Code]
-% CS1Trials_nR = [4 3];                     % CS+ - [Number of non Rewarded Trials, Code]
+CS1Trials_R = [71 2];                     % CS+ - [Number of Rewarded Trials, Code]
+CS1Trials_nR = [4 3];                     % CS+ - [Number of non Rewarded Trials, Code]
 
 numOfCS0    = CS0Trials(2)*ones(1, CS0Trials(1));
 numOfCS1_R  = CS1Trials_R(2)*ones(1, CS1Trials_R(1));
-% numOfCS1_nR = CS1Trials_nR(2)*ones(1, CS1Trials_nR(1));
+numOfCS1_nR = CS1Trials_nR(2)*ones(1, CS1Trials_nR(1));
 
 trialTypes = ([numOfCS0, numOfCS1_R]);
 trialTypes = trialTypes(randperm(length(trialTypes)));               % Create Trial Vector
@@ -88,22 +88,20 @@ for currentTrial = 1: S.GUI.MaxTrials
             StimulusArgument= {'ValveModule1', 7, 'BNC1',1};        % Inser the number of the valve to be opened for odors 
             FollowingLED = 'Reward';
             EndTrialDuration= S.GUI.EndTrialLength;
-
+         
+        % CS+ no Reward
+        case 3
+            StimulusArgument= {'ValveModule1', 7, 'BNC1',1};        % Insert the number of the valve to be opened for odors
+            FollowingLED = 'FakeReward';
+            EndTrialDuration= S.GUI.EndTrialLength + S.GUI.DrinkingGraceDuration;
+            
         % Exit Protocol   
         case 0
             RunProtocol('Stop');
+            
     end
-    
-%%%%%%%%% IN CASE OF NON-REWARDING CS+ TRIALS %%%%%%%%%%%          
-%         % CS+ no Reward
-%         case 3
-%             StimulusArgument= {'ValveModule1', 5, 'BNC1',1};        % Insert the number of the valve to be opened for odors
-%             FollowingPause = 'TimeForResponse';                      % No reward given
-%             NoLickActionState= 'NothingHappens';
-%             LickActionState= 'NothingHappens';
-%             NothingTime = S.GUI.DrinkingGraceDuration
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+        
+            
     sma= NewStateMachine(); % Initialize new state machine description    
     
     sma= AddState(sma, 'Name', 'PreStimulus',...
@@ -160,15 +158,16 @@ for currentTrial = 1: S.GUI.MaxTrials
     RawEvents= RunStateMatrix;
     if ~isempty(fieldnames(RawEvents)) % If trial data was returned (i.e. if not final trial, interrupted by user)
         BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
-        BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
+        BpodSystem.Data = BpodNotebook('sync', BpodSystem.Data); %If you are using plugins that can add data to the data struct, call their update methods.
+        BpodSystem.Data.TrialSettings(currentTrial) = S; %Add a snapshot of the current settings struct, for a record of the parameters used for the current trial.
         BpodSystem.Data.TrialTypes(currentTrial) = trialTypes(currentTrial); % Adds the trial type of the current trial to data
-        UpdateTrialTypeOutcomePlot(trialTypes, BpodSystem.Data);
         UpdateTotalRewardDisplay(S.GUI.RewardAmount, currentTrial);
-        SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
+        UpdateTrialTypeOutcomePlot(trialTypes, BpodSystem.Data);
+        SaveBpodSessionData; %Save the data struct to the current data file.
     end
     HandlePauseCondition;
     if BpodSystem.Status.BeingUsed == 0
-        Obj= ValveDriverModule('COM4');   %%%
+        Obj= ValveDriverModule('COM7');   %%%
         for idx= 1:8
             closeValve(Obj, idx)
         end
@@ -189,7 +188,7 @@ function UpdateTrialTypeOutcomePlot(TrialTypes, Data)
 global BpodSystem
 
 Outcomes = zeros(1,Data.nTrials);
-for x = 1:Data.nTrials    
+for x = 1:Data.nTrials
     if TrialTypes(x) == 2 % CS+ Trials
         if ~isfield(Data.RawEvents.Trial{x}.Events,'Port1In')
             Outcomes(x) = -1; % No Lick
@@ -202,7 +201,7 @@ for x = 1:Data.nTrials
             else
                 Outcomes(x)= -1; % No Lick, wrong
             end
-        end        
+        end
     elseif TrialTypes(x) == 1 % No Odor Trials
         if ~isfield(Data.RawEvents.Trial{x}.Events,'Port1In')
             Outcomes(x) = 1; % No Lick, correct
@@ -215,7 +214,9 @@ for x = 1:Data.nTrials
             else
                 Outcomes(x)= 1; % No Lick
             end
-        end        
+        end
+    elseif TrialTypes(x) == 1 % No Odor Trials
+        Outcomes(x) = 3; % No Lick, correct
     end
 end
 TrialTypeOutcomePlot(BpodSystem.GUIHandles.TrialTypeOutcomePlot,'update',Data.nTrials+1,TrialTypes,Outcomes);
